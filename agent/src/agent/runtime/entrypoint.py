@@ -3,31 +3,18 @@
 
 from __future__ import annotations
 
-import asyncio
 import os
-from contextlib import AsyncExitStack
 
-from loguru import logger
+import uvicorn
 
 from agent.runtime.app import RuntimeApp, RuntimeConfig
-
-
-async def _run() -> None:
-    """ランタイムメインループ。"""
-    config = RuntimeConfig.from_env(os.environ)
-    async with AsyncExitStack() as stack:
-        app = RuntimeApp(config=config)
-        await stack.enter_async_context(app.lifecycle())
-        await app.run_forever()
-
-
-def main() -> None:
-    """同期エントリーポイント。"""
-    try:
-        asyncio.run(_run())
-    except KeyboardInterrupt:
-        logger.info("Runtime stopped by user")
+from agent.runtime.server import create_app
 
 
 if __name__ == "__main__":
-    main()
+    config = RuntimeConfig.from_env(os.environ)
+    runtime_app = RuntimeApp(config=config)
+    app = create_app(runtime_app)
+
+    port = int(os.environ.get("RUNTIME_PORT", "8080"))
+    uvicorn.run(app, host="0.0.0.0", port=port, log_config=None)

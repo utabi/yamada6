@@ -22,5 +22,10 @@ volumes/       # Docker ボリュームのマウント先 (git では空)
 2. docker/ の scaffolding を整備し、staging → runtime の安全パイプラインを構築する
 3. PDCA 制御・ドライブサイドカー・データライフサイクルを段階的に組み込む
 
+## Runtime API (現在のひな形)
+- `uvicorn` で `agent.runtime.entrypoint` が FastAPI を起動し、`/healthz` と `/status` を公開
+- `/status` は最後に生成したプランや実行結果を簡易 JSON で返す（将来的に PDCA 情報へ拡張）
+- `docker/compose.yml` ではポート `8080` を公開し、ダッシュボードや staging から参照できるようにしている
+
 ## ライセンス
 未定

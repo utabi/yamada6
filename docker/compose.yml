@@ -13,10 +13,13 @@ services:
       - runtime_logs:/app/logs
     environment:
       - YAMADA_ENV=runtime
+      - RUNTIME_PORT=8080
     depends_on:
       - dashboard
     networks:
       - yamada6
+    ports:
+      - "8080:8080"
 
   staging:
     build:

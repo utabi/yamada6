@@ -5,13 +5,14 @@ from __future__ import annotations
 import asyncio
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from typing import AsyncIterator, Mapping
+from typing import AsyncIterator, Mapping, Optional
 
 from loguru import logger
 
 from agent.executor import Executor
-from agent.planner import Planner
-from agent.scheduler import Scheduler
+from agent.executor import ExecutionResult
+from agent.planner import Plan, Planner
+from agent.scheduler import ScheduledTask, Scheduler
 
 
 @dataclass(slots=True)
@@ -41,6 +42,10 @@ class RuntimeApp:
         self._executor = Executor()
         self._scheduler = Scheduler()
         self._running = False
+        self._loop_count = 0
+        self._last_plan: Optional[Plan] = None
+        self._last_task: Optional[ScheduledTask] = None
+        self._last_execution: Optional[ExecutionResult] = None
 
     @asynccontextmanager
     async def lifecycle(self) -> AsyncIterator[None]:
@@ -56,9 +61,18 @@ class RuntimeApp:
         logger.info("Runtime loop start (interval=%ss)", self._config.loop_interval_seconds)
         while self._running:
             plan = await self._planner.plan()
+            self._last_plan = plan
+
             task = await self._scheduler.schedule(plan)
-            await self._executor.execute(task)
+            self._last_task = task
+
+            execution = await self._executor.execute(task.plan)
+            self._last_execution = execution
+
+            self._loop_count += 1
             await asyncio.sleep(self._config.loop_interval_seconds)
+
+        logger.info("Runtime loop stop")
 
     @property
     def planner(self) -> Planner:
@@ -71,3 +85,35 @@ class RuntimeApp:
     @property
     def scheduler(self) -> Scheduler:
         return self._scheduler
+
+    def stop(self) -> None:
+        self._running = False
+
+    def snapshot(self) -> dict:
+        def plan_payload(plan: Optional[Plan]) -> Optional[dict]:
+            if plan is None:
+                return None
+            return {
+                "summary": plan.summary,
+                "created_at": plan.created_at.isoformat(),
+            }
+
+        task = self._last_task
+        execution = self._last_execution
+        return {
+            "loop_interval_seconds": self._config.loop_interval_seconds,
+            "loop_count": self._loop_count,
+            "last_plan": plan_payload(self._last_plan),
+            "last_scheduled": None
+            if task is None
+            else {
+                "priority": task.priority,
+            },
+            "last_execution": None
+            if execution is None
+            else {
+                "status": execution.status,
+                "detail": execution.detail,
+                "completed_at": execution.completed_at.isoformat(),
+            },
+        }
