@@ -70,6 +70,7 @@ class RuntimeApp:
         self._pending_patches: Dict[str, PendingPatch] = {}
         self._patch_storage_dir = self._config.patch_storage_dir
         self._patch_storage_dir.mkdir(parents=True, exist_ok=True)
+        self._audit_log_path = self._patch_storage_dir / "audit.log"
         self._reload_patches()
 
     @asynccontextmanager
@@ -183,6 +184,22 @@ class RuntimeApp:
         self._applied_patches.append(patch)
         self._write_audit_log(patch, status="applied")
 
+    def list_applied_patches(self) -> List[PendingPatch]:
+        return list(self._applied_patches)
+
+    def iter_audit_log(self) -> List[dict]:
+        if not self._audit_log_path.exists():
+            return []
+        entries: List[dict] = []
+        for line in self._audit_log_path.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            try:
+                entries.append(json.loads(line))
+            except json.JSONDecodeError as exc:
+                logger.error("Invalid audit line: %s", exc)
+        return entries
+
     def _write_patch_file(self, patch: PendingPatch) -> None:
         path = self._patch_storage_dir / f"{patch.patch_id}.json"
         path.write_text(json.dumps(asdict(patch), ensure_ascii=False, indent=2), encoding="utf-8")
@@ -193,14 +210,13 @@ class RuntimeApp:
             path.unlink()
 
     def _write_audit_log(self, patch: PendingPatch, status: str) -> None:
-        log_path = self._patch_storage_dir / "audit.log"
         record = {
             "patch_id": patch.patch_id,
             "status": status,
             "timestamp": dt.datetime.utcnow().isoformat() + "Z",
             "summary": patch.summary,
         }
-        with log_path.open("a", encoding="utf-8") as fp:
+        with self._audit_log_path.open("a", encoding="utf-8") as fp:
             fp.write(json.dumps(record, ensure_ascii=False) + "\n")
 
     def _reload_patches(self) -> None:
@@ -213,3 +229,5 @@ class RuntimeApp:
                 logger.error("Failed to load patch metadata %s: %s", file, exc)
             else:
                 self._pending_patches[patch.patch_id] = patch
+        # 過去に適用済みのレコードは audit log から再構築可能だが、ここでは起動時に空とする
+        self._applied_patches: List[PendingPatch] = []

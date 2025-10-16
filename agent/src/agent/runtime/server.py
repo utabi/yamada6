@@ -66,6 +66,14 @@ def create_app(runtime: RuntimeApp) -> FastAPI:
             raise HTTPException(status_code=404, detail="Patch not found")
         return PatchResponse(**asdict(patch))
 
+    @app.get("/patches/applied", response_model=List[PatchResponse])
+    async def list_applied() -> List[PatchResponse]:
+        return [PatchResponse(**asdict(patch)) for patch in runtime.list_applied_patches()]
+
+    @app.get("/patches/audit", response_model=List[dict])
+    async def audit_log() -> List[dict]:
+        return runtime.iter_audit_log()
+
     @app.post("/control/pause", status_code=202)
     async def pause() -> dict[str, str]:
         runtime.pause()
