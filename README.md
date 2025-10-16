@@ -6,6 +6,7 @@ Yamada6 は、自律的に自己存続を守りつつ環境変化へ進化し続
 - `AGENTS.md` — 作業前に必ず読む指針
 - `yamada6_better.md` — 歴史と実装ロードマップ
 - `yamada6.md` — 初期コンセプト概要
+- `docs/PATCH_WORKFLOW.md` — staging → runtime のパッチ適用フロー案
 
 ## ディレクトリ概要
 ```
@@ -24,8 +25,9 @@ volumes/       # Docker ボリュームのマウント先 (git では空)
 
 ## Runtime API (現在のひな形)
 - `uvicorn` で FastAPI を起動し、ランタイムループと同一プロセスで動作
-- `/healthz`, `/status` に加え、`/control/pause`, `/control/resume`, `/patches` を提供
+- `/healthz`, `/status` に加え、`/control/pause`, `/control/resume`, `/patches`, `/patches/{id}/apply` を提供
 - `/patches` は runtime を一時停止した状態でのみ受け付け、staging から送られたパッチメタデータをキューに積む
+- `/patches/{id}/apply` は適用リクエストを受け取り、現状はキューから除外するだけの雛形（実適用は今後実装）
 - これらのエンドポイントをダッシュボード/承認フローから利用し、手動適用前の状態遷移を可視化する
 
 ## ライセンス

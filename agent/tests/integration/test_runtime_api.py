@@ -44,6 +44,13 @@ def test_runtime_api_health_and_status():
         queued = runtime.snapshot()["pending_patches"]
         assert queued and queued[0]["patch_id"] == "patch-1"
 
+        apply_resp = client.post("/patches/patch-1/apply")
+        assert apply_resp.status_code == HTTPStatus.ACCEPTED
+        assert runtime.snapshot()["pending_patches"] == []
+
+        apply_missing = client.post("/patches/patch-1/apply")
+        assert apply_missing.status_code == HTTPStatus.NOT_FOUND
+
         client.post("/control/resume")
         conflict = client.post(
             "/patches",
@@ -55,3 +62,6 @@ def test_runtime_api_health_and_status():
             },
         )
         assert conflict.status_code == HTTPStatus.CONFLICT
+
+        not_found = client.post("/patches/patch-unknown/apply")
+        assert not_found.status_code == HTTPStatus.CONFLICT

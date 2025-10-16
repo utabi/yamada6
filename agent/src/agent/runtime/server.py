@@ -6,6 +6,7 @@ import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
+from loguru import logger
 from pydantic import BaseModel, Field
 
 from agent.runtime.app import PendingPatch, RuntimeApp
@@ -62,5 +63,18 @@ def create_app(runtime: RuntimeApp) -> FastAPI:
             )
             return {"status": "queued"}
         raise HTTPException(status_code=409, detail="Runtime must be paused before queuing patches")
+
+    @app.post("/patches/{patch_id}/apply", status_code=202)
+    async def apply_patch(patch_id: str) -> dict[str, str]:
+        if not runtime.is_paused():
+            raise HTTPException(status_code=409, detail="Pause runtime before applying patches")
+
+        patch = runtime.pop_patch(patch_id)
+        if patch is None:
+            raise HTTPException(status_code=404, detail="Patch not found")
+
+        # TODO: 実際の git apply / テスト実行をここで実装
+        logger.info("Apply patch requested: %s", patch.patch_id)
+        return {"status": "apply_requested", "patch_id": patch.patch_id}
 
     return app

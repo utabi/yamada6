@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, asdict
-from typing import AsyncIterator, List, Mapping, Optional
+from typing import AsyncIterator, Dict, List, Mapping, Optional
 
 from loguru import logger
 
@@ -57,7 +57,7 @@ class RuntimeApp:
         self._last_plan: Optional[Plan] = None
         self._last_task: Optional[ScheduledTask] = None
         self._last_execution: Optional[ExecutionResult] = None
-        self._pending_patches: List[PendingPatch] = []
+        self._pending_patches: Dict[str, PendingPatch] = {}
 
     @asynccontextmanager
     async def lifecycle(self) -> AsyncIterator[None]:
@@ -141,8 +141,14 @@ class RuntimeApp:
                 "detail": execution.detail,
                 "completed_at": execution.completed_at.isoformat(),
             },
-            "pending_patches": [asdict(patch) for patch in self._pending_patches],
+            "pending_patches": [asdict(patch) for patch in self._pending_patches.values()],
         }
 
     def enqueue_patch(self, patch: PendingPatch) -> None:
-        self._pending_patches.append(patch)
+        self._pending_patches[patch.patch_id] = patch
+
+    def has_patch(self, patch_id: str) -> bool:
+        return patch_id in self._pending_patches
+
+    def pop_patch(self, patch_id: str) -> Optional[PendingPatch]:
+        return self._pending_patches.pop(patch_id, None)
