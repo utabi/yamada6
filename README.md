@@ -23,9 +23,10 @@ volumes/       # Docker ボリュームのマウント先 (git では空)
 3. PDCA 制御・ドライブサイドカー・データライフサイクルを段階的に組み込む
 
 ## Runtime API (現在のひな形)
-- `uvicorn` で `agent.runtime.entrypoint` が FastAPI を起動し、`/healthz` と `/status` を公開
-- `/status` は最後に生成したプランや実行結果を簡易 JSON で返す（将来的に PDCA 情報へ拡張）
-- `docker/compose.yml` ではポート `8080` を公開し、ダッシュボードや staging から参照できるようにしている
+- `uvicorn` で FastAPI を起動し、ランタイムループと同一プロセスで動作
+- `/healthz`, `/status` に加え、`/control/pause`, `/control/resume`, `/patches` を提供
+- `/patches` は runtime を一時停止した状態でのみ受け付け、staging から送られたパッチメタデータをキューに積む
+- これらのエンドポイントをダッシュボード/承認フローから利用し、手動適用前の状態遷移を可視化する
 
 ## ライセンス
 未定
