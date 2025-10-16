@@ -1,0 +1,17 @@
+# Python artifacts
+__pycache__/
+*.pyc
+
+# Editor
+.vscode/
+.idea/
+.DS_Store
+
+# Virtual envs
+.venv/
+
+# Docker volumes and runtime artifacts
+volumes/
+logs/
+state/
+tmp/

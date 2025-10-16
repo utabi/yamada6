@@ -1,0 +1,8 @@
+.git
+.gitignore
+volumes
+logs
+state
+__pycache__
+*.pyc
+.DS_Store

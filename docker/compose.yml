@@ -1,0 +1,55 @@
+version: "3.9"
+
+services:
+  runtime:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.runtime
+    container_name: yamada6-runtime
+    working_dir: /app
+    volumes:
+      - ../agent:/app/agent:ro
+      - runtime_state:/app/state
+      - runtime_logs:/app/logs
+    environment:
+      - YAMADA_ENV=runtime
+    depends_on:
+      - dashboard
+    networks:
+      - yamada6
+
+  staging:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.staging
+    container_name: yamada6-staging
+    working_dir: /workspace
+    volumes:
+      - ../agent:/workspace/agent:rw
+      - ../volumes/staging_cache:/workspace/cache
+    environment:
+      - YAMADA_ENV=staging
+    networks:
+      - yamada6
+
+  dashboard:
+    image: ghcr.io/utabi/yamada6-dashboard:latest
+    container_name: yamada6-dashboard
+    restart: unless-stopped
+    environment:
+      - YAMADA_ENV=dashboard
+    ports:
+      - "8787:8787"
+    volumes:
+      - runtime_state:/var/lib/yamada6/state:ro
+      - runtime_logs:/var/lib/yamada6/logs:ro
+    networks:
+      - yamada6
+
+volumes:
+  runtime_state:
+  runtime_logs:
+
+networks:
+  yamada6:
+    driver: bridge
