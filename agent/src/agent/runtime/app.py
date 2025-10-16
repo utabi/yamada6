@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, asdict
+from pathlib import Path
 from typing import AsyncIterator, Dict, List, Mapping, Optional
 
 from loguru import logger
@@ -23,6 +25,7 @@ class RuntimeConfig:
     """
 
     loop_interval_seconds: float = 10.0
+    patch_storage_dir: Path = Path("state/patches")
 
     @classmethod
     def from_env(cls, env: Mapping[str, str]) -> "RuntimeConfig":
@@ -30,7 +33,10 @@ class RuntimeConfig:
             interval = float(env.get("YAMADA_LOOP_INTERVAL", 10))
         except ValueError:
             interval = 10.0
-        return cls(loop_interval_seconds=interval)
+        patch_dir = Path(env.get("PATCH_STORAGE_DIR", "state/patches")).expanduser()
+        if not patch_dir.is_absolute():
+            patch_dir = Path.cwd() / patch_dir
+        return cls(loop_interval_seconds=interval, patch_storage_dir=patch_dir)
 
 
 @dataclass(slots=True)
@@ -41,6 +47,9 @@ class PendingPatch:
     summary: str
     author: str
     created_at: str
+    artifact_uri: str
+    test_report_uri: Optional[str] = None
+    notes: Optional[str] = None
 
 
 class RuntimeApp:
@@ -58,6 +67,8 @@ class RuntimeApp:
         self._last_task: Optional[ScheduledTask] = None
         self._last_execution: Optional[ExecutionResult] = None
         self._pending_patches: Dict[str, PendingPatch] = {}
+        self._patch_storage_dir = self._config.patch_storage_dir
+        self._patch_storage_dir.mkdir(parents=True, exist_ok=True)
 
     @asynccontextmanager
     async def lifecycle(self) -> AsyncIterator[None]:
@@ -142,13 +153,33 @@ class RuntimeApp:
                 "completed_at": execution.completed_at.isoformat(),
             },
             "pending_patches": [asdict(patch) for patch in self._pending_patches.values()],
+            "patch_storage_dir": str(self._patch_storage_dir),
         }
 
     def enqueue_patch(self, patch: PendingPatch) -> None:
         self._pending_patches[patch.patch_id] = patch
+        self._write_patch_file(patch)
 
     def has_patch(self, patch_id: str) -> bool:
         return patch_id in self._pending_patches
 
     def pop_patch(self, patch_id: str) -> Optional[PendingPatch]:
-        return self._pending_patches.pop(patch_id, None)
+        patch = self._pending_patches.pop(patch_id, None)
+        if patch is not None:
+            self._delete_patch_file(patch.patch_id)
+        return patch
+
+    def get_patch(self, patch_id: str) -> Optional[PendingPatch]:
+        return self._pending_patches.get(patch_id)
+
+    def list_patches(self) -> List[PendingPatch]:
+        return list(self._pending_patches.values())
+
+    def _write_patch_file(self, patch: PendingPatch) -> None:
+        path = self._patch_storage_dir / f"{patch.patch_id}.json"
+        path.write_text(json.dumps(asdict(patch), ensure_ascii=False, indent=2), encoding="utf-8")
+
+    def _delete_patch_file(self, patch_id: str) -> None:
+        path = self._patch_storage_dir / f"{patch_id}.json"
+        if path.exists():
+            path.unlink()
