@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import datetime as dt
 import json
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, asdict
@@ -69,6 +70,7 @@ class RuntimeApp:
         self._pending_patches: Dict[str, PendingPatch] = {}
         self._patch_storage_dir = self._config.patch_storage_dir
         self._patch_storage_dir.mkdir(parents=True, exist_ok=True)
+        self._reload_patches()
 
     @asynccontextmanager
     async def lifecycle(self) -> AsyncIterator[None]:
@@ -153,12 +155,14 @@ class RuntimeApp:
                 "completed_at": execution.completed_at.isoformat(),
             },
             "pending_patches": [asdict(patch) for patch in self._pending_patches.values()],
+            "applied_patches": [asdict(patch) for patch in self._applied_patches],
             "patch_storage_dir": str(self._patch_storage_dir),
         }
 
     def enqueue_patch(self, patch: PendingPatch) -> None:
         self._pending_patches[patch.patch_id] = patch
         self._write_patch_file(patch)
+        self._write_audit_log(patch, status="queued")
 
     def has_patch(self, patch_id: str) -> bool:
         return patch_id in self._pending_patches
@@ -175,6 +179,10 @@ class RuntimeApp:
     def list_patches(self) -> List[PendingPatch]:
         return list(self._pending_patches.values())
 
+    def mark_applied(self, patch: PendingPatch) -> None:
+        self._applied_patches.append(patch)
+        self._write_audit_log(patch, status="applied")
+
     def _write_patch_file(self, patch: PendingPatch) -> None:
         path = self._patch_storage_dir / f"{patch.patch_id}.json"
         path.write_text(json.dumps(asdict(patch), ensure_ascii=False, indent=2), encoding="utf-8")
@@ -183,3 +191,25 @@ class RuntimeApp:
         path = self._patch_storage_dir / f"{patch_id}.json"
         if path.exists():
             path.unlink()
+
+    def _write_audit_log(self, patch: PendingPatch, status: str) -> None:
+        log_path = self._patch_storage_dir / "audit.log"
+        record = {
+            "patch_id": patch.patch_id,
+            "status": status,
+            "timestamp": dt.datetime.utcnow().isoformat() + "Z",
+            "summary": patch.summary,
+        }
+        with log_path.open("a", encoding="utf-8") as fp:
+            fp.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+    def _reload_patches(self) -> None:
+        self._applied_patches: List[PendingPatch] = []
+        for file in self._patch_storage_dir.glob("*.json"):
+            try:
+                data = json.loads(file.read_text(encoding="utf-8"))
+                patch = PendingPatch(**data)
+            except Exception as exc:  # noqa: BLE001
+                logger.error("Failed to load patch metadata %s: %s", file, exc)
+            else:
+                self._pending_patches[patch.patch_id] = patch

@@ -106,6 +106,7 @@ def create_app(runtime: RuntimeApp) -> FastAPI:
             raise HTTPException(status_code=404, detail="Patch not found")
 
         # TODO: 実際の git apply / テスト実行をここで実装
+        runtime.mark_applied(patch)
         logger.info("Apply patch requested: %s", patch.patch_id)
         return {"status": "apply_requested", "patch_id": patch.patch_id}
 
