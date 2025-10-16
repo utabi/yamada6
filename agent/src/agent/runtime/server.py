@@ -5,10 +5,17 @@ from __future__ import annotations
 import asyncio
 from contextlib import asynccontextmanager
 
-from pydantic import BaseModel, Field
 from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel, Field
 
 from agent.runtime.app import PendingPatch, RuntimeApp
+
+
+class PatchPayload(BaseModel):
+    patch_id: str = Field(..., description="staging で発行されたパッチ ID")
+    summary: str
+    author: str
+    created_at: str
 
 
 def create_app(runtime: RuntimeApp) -> FastAPI:
@@ -41,12 +48,6 @@ def create_app(runtime: RuntimeApp) -> FastAPI:
     async def resume() -> dict[str, str]:
         runtime.resume()
         return {"status": "running"}
-
-    class PatchPayload(BaseModel):
-        patch_id: str = Field(..., description="staging で発行されたパッチ ID")
-        summary: str
-        author: str
-        created_at: str
 
     @app.post("/patches", status_code=202)
     async def receive_patch(payload: PatchPayload) -> dict[str, str]:

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from contextlib import asynccontextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from typing import AsyncIterator, List, Mapping, Optional
 
 from loguru import logger
@@ -141,7 +141,7 @@ class RuntimeApp:
                 "detail": execution.detail,
                 "completed_at": execution.completed_at.isoformat(),
             },
-            "pending_patches": [patch.__dict__ for patch in self._pending_patches],
+            "pending_patches": [asdict(patch) for patch in self._pending_patches],
         }
 
     def enqueue_patch(self, patch: PendingPatch) -> None:
