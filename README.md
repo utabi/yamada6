@@ -23,12 +23,11 @@ volumes/       # Docker ボリュームのマウント先 (git では空)
 2. docker/ の scaffolding を整備し、staging → runtime の安全パイプラインを構築する
 3. PDCA 制御・ドライブサイドカー・データライフサイクルを段階的に組み込む
 
-## Runtime API (現在のひな形)
 - `uvicorn` で FastAPI を起動し、ランタイムループと同一プロセスで動作
-- `/healthz`, `/status` に加え、`/control/pause`, `/control/resume`, `/patches`, `/patches/{id}`, `/patches/{id}/apply`, `/patches/applied`, `/patches/audit` を提供
+- `/healthz`, `/status` に加え、`/control/pause`, `/control/resume`, `/patches`, `/patches/{id}`, `/patches/{id}/apply`, `/patches/{id}/rollback`, `/patches/applied`, `/patches/audit` を提供
 - `/patches` は runtime を一時停止した状態でのみ受け付け、staging から送られたパッチメタデータをキューに積む
-- `/patches/{id}/apply` は `artifact_uri` の `file://` パスを取得し、`PATCH_STORAGE_DIR`（デフォルト `state/patches/`）へコピーしたうえで適用待ちから除外
-- `/patches/applied` と `/patches/audit` を通じて適用済みのメタデータや監査ログをダッシュボードから参照可能
+- `/patches/{id}/apply` は `artifact_uri` からアーティファクトをコピーし、`PATCH_APPLY_MODE` / `PATCH_APPLY_HOOK` に基づいて適用テストを実行。成功なら pending から除外し `/patches/applied` へ、失敗なら pending に残し `audit.log` に `apply_failed` を記録
+- `/patches/audit` で全履歴（queued / artifact_copied / apply_success / apply_failed など）を JSON で取得可能
 - これらのエンドポイントをダッシュボード/承認フローから利用し、手動適用前の状態遷移を可視化する
 
 ## ライセンス

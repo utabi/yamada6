@@ -188,6 +188,11 @@ class RuntimeApp:
         return list(self._pending_patches.values())
 
     def fetch_patch_artifact(self, patch: PendingPatch) -> Path:
+        if patch.artifact_local_path:
+            cached = Path(patch.artifact_local_path)
+            if cached.exists():
+                return cached
+
         parsed = urlparse(patch.artifact_uri)
         if parsed.scheme == "file":
             source = Path(parsed.path)
@@ -222,6 +227,8 @@ class RuntimeApp:
                     "artifact_local_path": patch.artifact_local_path,
                     "detail": result.detail,
                     "command": result.command,
+                    "stdout": result.stdout,
+                    "stderr": result.stderr,
                 },
             )
         else:
@@ -231,6 +238,8 @@ class RuntimeApp:
                 extra={
                     "detail": result.detail,
                     "command": result.command,
+                    "stdout": result.stdout,
+                    "stderr": result.stderr,
                 },
             )
         return result

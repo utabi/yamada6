@@ -14,6 +14,17 @@ class ApplyResult:
     detail: str
     artifact_path: Path
     command: str
+    stdout: str
+    stderr: str
+
+
+@dataclass(slots=True)
+class RollbackResult:
+    ok: bool
+    detail: str
+    command: str
+    stdout: str
+    stderr: str
 
 
 class PatchExecutor:
@@ -32,9 +43,49 @@ class PatchExecutor:
                 text=True,
             )
             detail = completed.stdout.strip() or completed.stderr.strip() or "hook executed"
-            return ApplyResult(completed.returncode == 0, detail, artifact_path, command=hook)
+            return ApplyResult(
+                completed.returncode == 0,
+                detail,
+                artifact_path,
+                command=hook,
+                stdout=completed.stdout,
+                stderr=completed.stderr,
+            )
 
         mode = os.environ.get("PATCH_APPLY_MODE", "noop").lower().strip()
         if mode == "fail":
-            return ApplyResult(False, "Simulated failure (PATCH_APPLY_MODE=fail)", artifact_path, command="noop")
-        return ApplyResult(True, "Simulated apply success", artifact_path, command="noop")
+            return ApplyResult(
+                False,
+                "Simulated failure (PATCH_APPLY_MODE=fail)",
+                artifact_path,
+                command="noop",
+                stdout="",
+                stderr="",
+            )
+        return ApplyResult(
+            True,
+            "Simulated apply success",
+            artifact_path,
+            command="noop",
+            stdout="",
+            stderr="",
+        )
+
+    def rollback(self, patch_id: str) -> RollbackResult:
+        hook = os.environ.get("PATCH_ROLLBACK_HOOK")
+        if hook:
+            completed = subprocess.run(
+                [hook, patch_id],
+                cwd=self._workspace,
+                capture_output=True,
+                text=True,
+            )
+            detail = completed.stdout.strip() or completed.stderr.strip() or "rollback executed"
+            return RollbackResult(
+                completed.returncode == 0,
+                detail,
+                command=hook,
+                stdout=completed.stdout,
+                stderr=completed.stderr,
+            )
+        return RollbackResult(True, "Rollback noop", command="noop", stdout="", stderr="")
