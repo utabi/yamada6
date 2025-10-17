@@ -10,4 +10,4 @@
    - `/patches/{id}/apply` は `PATCH_APPLY_MODE` / `PATCH_APPLY_HOOK` に基づき適用テストを実行し、結果を `audit.log` に `apply_success` / `apply_failed` として記録
    - 成功時は `/status` から pending queue を除外し `/patches/applied` に反映。失敗時は pending に残り、`/patches/{id}/rollback` (stub) や再実行で対応
 
-現状は `file://` のアーティファクトコピーと監査ログ・疑似適用フローまで実装済み。`PATCH_APPLY_MODE=fail` で失敗動作をテストできる。メタデータは `state/patches/<id>.json` に保存され、再起動後も参照可能。
+現状は `file://` のアーティファクトコピーと監査ログ・疑似適用フローまで実装済み。`PATCH_APPLY_MODE=fail` で失敗動作をテストできる。`PATCH_APPLY_HOOK` を使えば任意スクリプト（例: git worktree で `git apply` → テスト → `git reset --hard`）を呼び出せる。メタデータは `state/patches/<id>.json` に保存され、再起動後も参照可能。

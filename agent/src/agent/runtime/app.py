@@ -19,7 +19,7 @@ from agent.executor import Executor
 from agent.executor import ExecutionResult
 from agent.planner import Plan, Planner
 from agent.scheduler import ScheduledTask, Scheduler
-from agent.runtime.patch_executor import ApplyResult, PatchExecutor
+from agent.runtime.patch_executor import ApplyResult, PatchExecutor, RollbackResult
 
 
 @dataclass(slots=True)
@@ -242,6 +242,30 @@ class RuntimeApp:
                     "stderr": result.stderr,
                 },
             )
+        return result
+
+    def rollback_patch(self, patch_id: str) -> RollbackResult:
+        patch = self.get_patch(patch_id)
+        if patch is None:
+            raise KeyError(patch_id)
+
+        result = self._patch_executor.rollback(patch_id)
+        status = "rollback_success" if result.ok else "rollback_failed"
+        extra = {
+            "detail": result.detail,
+            "command": result.command,
+            "stdout": result.stdout,
+            "stderr": result.stderr,
+        }
+        self._write_audit_log(patch, status=status, extra=extra)
+
+        if result.ok and patch.artifact_local_path:
+            cached = Path(patch.artifact_local_path)
+            if cached.exists():
+                cached.unlink()
+            patch.artifact_local_path = None
+            self._write_patch_file(patch)
+
         return result
 
     def list_applied_patches(self) -> List[PendingPatch]:

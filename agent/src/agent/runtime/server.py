@@ -129,7 +129,16 @@ def create_app(runtime: RuntimeApp) -> FastAPI:
 
     @app.post("/patches/{patch_id}/rollback", status_code=202)
     async def rollback_patch(patch_id: str) -> dict[str, str]:
-        logger.info("Rollback requested (stub): %s", patch_id)
-        return {"status": "rollback_pending", "patch_id": patch_id}
+        try:
+            result = runtime.rollback_patch(patch_id)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail="Patch not found") from exc
+
+        logger.info("Rollback requested: %s", patch_id)
+        return {
+            "status": "rollback_success" if result.ok else "rollback_failed",
+            "patch_id": patch_id,
+            "detail": result.detail,
+        }
 
     return app

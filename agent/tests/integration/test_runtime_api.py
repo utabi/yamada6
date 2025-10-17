@@ -163,3 +163,13 @@ def test_patch_apply_failure(tmp_path, monkeypatch):
         # JSON メタデータが残っていること（再試行可能）
         stored_file = Path(runtime.snapshot()["patch_storage_dir"]) / "fail-1.json"
         assert stored_file.exists()
+
+        rollback_resp = client.post("/patches/fail-1/rollback")
+        assert rollback_resp.status_code == HTTPStatus.ACCEPTED
+        assert rollback_resp.json()["status"] == "rollback_success"
+
+        audit_entries = client.get("/patches/audit").json()
+        statuses = {entry["status"] for entry in audit_entries}
+        assert "rollback_success" in statuses
+
+    monkeypatch.delenv("PATCH_APPLY_MODE", raising=False)
