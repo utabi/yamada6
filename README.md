@@ -25,9 +25,10 @@ volumes/       # Docker ボリュームのマウント先 (git では空)
 
 ## Runtime API (現在のひな形)
 - `uvicorn` で FastAPI を起動し、ランタイムループと同一プロセスで動作
-- `/healthz`, `/status` に加え、`/control/pause`, `/control/resume`, `/patches`, `/patches/{id}/apply` を提供
+- `/healthz`, `/status` に加え、`/control/pause`, `/control/resume`, `/patches`, `/patches/{id}`, `/patches/{id}/apply`, `/patches/applied`, `/patches/audit` を提供
 - `/patches` は runtime を一時停止した状態でのみ受け付け、staging から送られたパッチメタデータをキューに積む
-- `/patches/{id}/apply` は適用リクエストを受け取り、現状はキューから除外するだけの雛形（実適用は今後実装）
+- `/patches/{id}/apply` は `artifact_uri` の `file://` パスを取得し、`PATCH_STORAGE_DIR`（デフォルト `state/patches/`）へコピーしたうえで適用待ちから除外
+- `/patches/applied` と `/patches/audit` を通じて適用済みのメタデータや監査ログをダッシュボードから参照可能
 - これらのエンドポイントをダッシュボード/承認フローから利用し、手動適用前の状態遷移を可視化する
 
 ## ライセンス

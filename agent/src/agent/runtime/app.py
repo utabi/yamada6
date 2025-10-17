@@ -5,10 +5,12 @@ from __future__ import annotations
 import asyncio
 import datetime as dt
 import json
+import shutil
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import AsyncIterator, Dict, List, Mapping, Optional
+from urllib.parse import urlparse
 
 from loguru import logger
 
@@ -51,6 +53,7 @@ class PendingPatch:
     artifact_uri: str
     test_report_uri: Optional[str] = None
     notes: Optional[str] = None
+    artifact_local_path: Optional[str] = None
 
 
 class RuntimeApp:
@@ -163,7 +166,7 @@ class RuntimeApp:
     def enqueue_patch(self, patch: PendingPatch) -> None:
         self._pending_patches[patch.patch_id] = patch
         self._write_patch_file(patch)
-        self._write_audit_log(patch, status="queued")
+        self._write_audit_log(patch, status="queued", extra={"artifact_uri": patch.artifact_uri})
 
     def has_patch(self, patch_id: str) -> bool:
         return patch_id in self._pending_patches
@@ -180,9 +183,29 @@ class RuntimeApp:
     def list_patches(self) -> List[PendingPatch]:
         return list(self._pending_patches.values())
 
+    def fetch_patch_artifact(self, patch: PendingPatch) -> Path:
+        parsed = urlparse(patch.artifact_uri)
+        if parsed.scheme == "file":
+            source = Path(parsed.path)
+            if not source.exists():
+                raise FileNotFoundError(source)
+            destination = self._patch_storage_dir / f"{patch.patch_id}.artifact"
+            shutil.copy2(source, destination)
+            patch.artifact_local_path = str(destination)
+            self._write_audit_log(
+                patch,
+                status="artifact_copied",
+                extra={"source": patch.artifact_uri, "destination": str(destination)},
+            )
+            self._write_patch_file(patch)
+            return destination
+        raise ValueError(f"Unsupported artifact URI scheme: {parsed.scheme or 'missing'}")
+
     def mark_applied(self, patch: PendingPatch) -> None:
         self._applied_patches.append(patch)
-        self._write_audit_log(patch, status="applied")
+        self._write_audit_log(patch, status="applied", extra={
+            "artifact_local_path": patch.artifact_local_path,
+        })
 
     def list_applied_patches(self) -> List[PendingPatch]:
         return list(self._applied_patches)
@@ -209,13 +232,15 @@ class RuntimeApp:
         if path.exists():
             path.unlink()
 
-    def _write_audit_log(self, patch: PendingPatch, status: str) -> None:
+    def _write_audit_log(self, patch: PendingPatch, status: str, extra: Optional[dict] = None) -> None:
         record = {
             "patch_id": patch.patch_id,
             "status": status,
             "timestamp": dt.datetime.utcnow().isoformat() + "Z",
             "summary": patch.summary,
         }
+        if extra:
+            record.update(extra)
         with self._audit_log_path.open("a", encoding="utf-8") as fp:
             fp.write(json.dumps(record, ensure_ascii=False) + "\n")
 
@@ -230,4 +255,3 @@ class RuntimeApp:
             else:
                 self._pending_patches[patch.patch_id] = patch
         # 過去に適用済みのレコードは audit log から再構築可能だが、ここでは起動時に空とする
-        self._applied_patches: List[PendingPatch] = []

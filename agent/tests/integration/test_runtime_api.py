@@ -41,6 +41,8 @@ def test_runtime_api_health_and_status(tmp_path, monkeypatch):
         assert runtime.is_paused() is False
 
         client.post("/control/pause")
+        artifact_src = tmp_path / "diff.patch"
+        artifact_src.write_text("diff --git a b", encoding="utf-8")
         patch_resp = client.post(
             "/patches",
             json={
@@ -48,7 +50,7 @@ def test_runtime_api_health_and_status(tmp_path, monkeypatch):
                 "summary": "Fix test",
                 "author": "staging",
                 "created_at": "2025-10-16T00:00:00Z",
-                "artifact_uri": "file:///workspace/diff.patch",
+                "artifact_uri": artifact_src.as_uri(),
                 "test_report_uri": "file:///workspace/report.json",
                 "notes": "unit tests passed",
             },
@@ -63,7 +65,7 @@ def test_runtime_api_health_and_status(tmp_path, monkeypatch):
         list_resp = client.get("/patches")
         assert list_resp.status_code == HTTPStatus.OK
         listed = list_resp.json()
-        assert listed[0]["artifact_uri"] == "file:///workspace/diff.patch"
+        assert listed[0]["artifact_uri"] == artifact_src.as_uri()
 
         detail_resp = client.get("/patches/patch-1")
         assert detail_resp.status_code == HTTPStatus.OK
@@ -73,9 +75,17 @@ def test_runtime_api_health_and_status(tmp_path, monkeypatch):
         assert apply_resp.status_code == HTTPStatus.ACCEPTED
         assert runtime.snapshot()["pending_patches"] == []
         assert not stored_file.exists()
-        audit_log = (patch_dir / "audit.log").read_text(encoding="utf-8").strip().splitlines()
-        assert any("\"status\": \"queued\"" in line for line in audit_log)
-        assert any("\"status\": \"applied\"" in line for line in audit_log)
+        copied_artifact = patch_dir / "patch-1.artifact"
+        assert copied_artifact.exists()
+        applied_list = client.get("/patches/applied")
+        assert applied_list.status_code == HTTPStatus.OK
+        assert applied_list.json()[0]["artifact_local_path"].endswith("patch-1.artifact")
+
+        audit_resp = client.get("/patches/audit")
+        assert audit_resp.status_code == HTTPStatus.OK
+        audit_entries = audit_resp.json()
+        statuses = {entry["status"] for entry in audit_entries}
+        assert {"queued", "artifact_copied", "applied"}.issubset(statuses)
 
         apply_missing = client.post("/patches/patch-1/apply")
         assert apply_missing.status_code == HTTPStatus.NOT_FOUND
@@ -88,7 +98,7 @@ def test_runtime_api_health_and_status(tmp_path, monkeypatch):
                 "summary": "Should fail",
                 "author": "staging",
                 "created_at": "2025-10-16T00:00:01Z",
-                "artifact_uri": "file:///workspace/diff2.patch",
+                "artifact_uri": artifact_src.as_uri(),
             },
         )
         assert conflict.status_code == HTTPStatus.CONFLICT
@@ -99,13 +109,15 @@ def test_runtime_api_health_and_status(tmp_path, monkeypatch):
 
 def test_restart_reload_pending_patches(tmp_path, monkeypatch):
     runtime, patch_dir, _ = create_runtime(tmp_path, monkeypatch)
+    artifact_src = tmp_path / "persist.patch"
+    artifact_src.write_text("diff --git c d", encoding="utf-8")
     runtime.enqueue_patch(
         PendingPatch(
             patch_id="persist-1",
             summary="Persisted patch",
             author="staging",
             created_at="2025-10-16T00:00:00Z",
-            artifact_uri="file:///persist.diff",
+            artifact_uri=artifact_src.as_uri(),
         )
     )
 
