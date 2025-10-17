@@ -21,6 +21,10 @@ def test_runtime_api_health_and_status(tmp_path, monkeypatch):
     app = create_app(runtime)
 
     with TestClient(app) as client:
+        ui = client.get("/ui")
+        assert ui.status_code == HTTPStatus.OK
+        assert "Runtime Dashboard" in ui.text
+
         health = client.get("/healthz")
         assert health.status_code == HTTPStatus.OK
         assert health.json() == {"status": "ok"}

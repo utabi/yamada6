@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Yamada6 Runtime Dashboard</title>
+    <link rel="stylesheet" href="/ui/static/style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Yamada6 Runtime Dashboard</h1>
+      <button id="refresh-btn">最新状態を取得</button>
+    </header>
+
+    <section>
+      <h2>ランタイム状態</h2>
+      <div id="status">
+        <p>読み込み中...</p>
+      </div>
+      <div class="controls">
+        <button data-action="pause">一時停止</button>
+        <button data-action="resume">再開</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>Pending Patches</h2>
+      <table id="pending-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>概要</th>
+            <th>作者</th>
+            <th>登録時刻</th>
+            <th>アクション</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>適用済みパッチ</h2>
+      <table id="applied-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>概要</th>
+            <th>詳細</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>監査ログ</h2>
+      <table id="audit-table">
+        <thead>
+          <tr>
+            <th>時刻</th>
+            <th>ID</th>
+            <th>ステータス</th>
+            <th>詳細</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </section>
+
+    <section>
+      <h2>パッチ登録</h2>
+      <form id="patch-form">
+        <div>
+          <label>Patch ID
+            <input name="patch_id" required />
+          </label>
+        </div>
+        <div>
+          <label>概要
+            <input name="summary" required />
+          </label>
+        </div>
+        <div>
+          <label>作者
+            <input name="author" value="local" />
+          </label>
+        </div>
+        <div>
+          <label>アーティファクト URI
+            <input name="artifact_uri" placeholder="file:///path/to/diff.patch" required />
+          </label>
+        </div>
+        <div>
+          <label>メモ
+            <input name="notes" />
+          </label>
+        </div>
+        <button type="submit">登録</button>
+      </form>
+      <p class="note">※ ランタイムが pause 状態である必要があります。</p>
+    </section>
+
+    <script src="/ui/static/app.js" type="module"></script>
+  </body>
+</html>

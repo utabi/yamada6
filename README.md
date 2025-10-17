@@ -24,7 +24,7 @@ volumes/       # Docker ボリュームのマウント先 (git では空)
 1. `yamada6_better.md` を読み、目的と Phase ロードマップを理解する
 2. ローカル環境で Python 仮想環境を作成 (`cd agent && python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements`) ※Poetry でも可
 3. `./host-tools/configure-hooks.sh` を実行して `.patch_env` を作成（後続のスクリプトで自動読み込み）
-4. `./host-tools/run_runtime.sh` で runtime API を起動し、`/patches` 系 API や hook を試す
+4. `./host-tools/run_runtime.sh` で runtime API を起動し、ブラウザから http://127.0.0.1:8080/ui を開いて状態確認や操作を行う
 5. Docker が必要になった段階で `docker/` ディレクトリを利用する（Big Sur など古い環境では未使用でも運用可能）
 
 - `uvicorn` で FastAPI を起動し、ランタイムループと同一プロセスで動作

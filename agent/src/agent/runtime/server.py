@@ -5,9 +5,12 @@ from __future__ import annotations
 import asyncio
 from contextlib import asynccontextmanager
 from dataclasses import asdict
+from pathlib import Path
 from typing import List
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from loguru import logger
 from pydantic import BaseModel, Field
 
@@ -84,6 +87,14 @@ def create_app(runtime: RuntimeApp) -> FastAPI:
     async def resume() -> dict[str, str]:
         runtime.resume()
         return {"status": "running"}
+
+    static_dir = Path(__file__).resolve().parents[4] / "webui" / "static"
+    if static_dir.exists():
+        app.mount("/ui/static", StaticFiles(directory=static_dir), name="ui-static")
+
+        @app.get("/ui", response_class=HTMLResponse)
+        async def ui_index() -> str:
+            return static_dir.joinpath("index.html").read_text(encoding="utf-8")
 
     @app.post("/patches", status_code=202)
     async def receive_patch(payload: PatchPayload) -> dict[str, str]:
