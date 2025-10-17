@@ -24,6 +24,7 @@ volumes/       # Docker ボリュームのマウント先 (git では空)
 1. `yamada6_better.md` を読み、目的と Phase ロードマップを理解する
 2. docker/ の scaffolding を整備し、staging → runtime の安全パイプラインを構築する
 3. PDCA 制御・ドライブサイドカー・データライフサイクルを段階的に組み込む
+4. `./host-tools/configure-hooks.sh` を実行して `.patch_env` を作成し、`host-tools/start.sh` で自動読み込み
 
 - `uvicorn` で FastAPI を起動し、ランタイムループと同一プロセスで動作
 - `/healthz`, `/status` に加え、`/control/pause`, `/control/resume`, `/patches`, `/patches/{id}`, `/patches/{id}/apply`, `/patches/{id}/rollback`, `/patches/applied`, `/patches/audit` を提供
