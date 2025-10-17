@@ -216,7 +216,7 @@ class RuntimeApp:
             raise KeyError(patch_id)
 
         artifact_path = self.fetch_patch_artifact(patch)
-        result = self._patch_executor.apply(artifact_path)
+        result = self._patch_executor.apply(patch_id, artifact_path)
         if result.ok:
             self.pop_patch(patch_id)
             self._applied_patches.append(patch)

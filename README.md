@@ -36,6 +36,8 @@ volumes/       # Docker ボリュームのマウント先 (git では空)
 - `PATCH_APPLY_MODE` … `noop` / `fail` で疑似適用挙動を切り替え
 - `PATCH_APPLY_HOOK` … パッチ適用時に呼び出すスクリプト
 - `PATCH_ROLLBACK_HOOK` … ロールバック時に呼び出すスクリプト
+
+サンプルフック: `agent/scripts/hooks/patch_apply_git.sh` を `PATCH_APPLY_HOOK` に設定すると、git worktree で patch を検証し `pytest` を実行する。
 - これらのエンドポイントをダッシュボード/承認フローから利用し、手動適用前の状態遷移を可視化する
 
 ## ライセンス

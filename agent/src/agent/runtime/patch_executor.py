@@ -33,11 +33,11 @@ class PatchExecutor:
     def __init__(self, workspace: Path) -> None:
         self._workspace = workspace
 
-    def apply(self, artifact_path: Path) -> ApplyResult:
+    def apply(self, patch_id: str, artifact_path: Path) -> ApplyResult:
         hook = os.environ.get("PATCH_APPLY_HOOK")
         if hook:
             completed = subprocess.run(
-                [hook, str(artifact_path)],
+                [hook, patch_id, str(artifact_path)],
                 cwd=self._workspace,
                 capture_output=True,
                 text=True,

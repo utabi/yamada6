@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PATCH_FILE="$1"
+PATCH_ID="$1"
+PATCH_FILE="$2"
 
 # TODO: 安全な git worktree / テスト実行手順をここに記述
 # 例:
@@ -14,4 +15,4 @@ PATCH_FILE="$1"
 # popd >/dev/null
 # git worktree remove "$WORKTREE_DIR"
 
-echo "patch apply hook executed for $PATCH_FILE"
+echo "patch apply hook executed for $PATCH_ID -> $PATCH_FILE"

@@ -1,6 +1,6 @@
 # Patch Hook 設定メモ
 
-`PATCH_APPLY_HOOK` と `PATCH_ROLLBACK_HOOK` を利用すると、runtime の `/patches/{id}/apply` / `/patches/{id}/rollback` が任意のスクリプトを呼び出すように設定できる。
+`PATCH_APPLY_HOOK` と `PATCH_ROLLBACK_HOOK` を利用すると、runtime の `/patches/{id}/apply` / `/patches/{id}/rollback` が任意のスクリプトを呼び出すように設定できる。hook には `(patch_id, artifact_path)` の順で引数が渡される。
 
 ## 1. apply hook の例
 `agent/scripts/hooks/patch_apply_sample.sh`
@@ -37,6 +37,16 @@ echo "rollback executed for $PATCH_ID"
 ```
 
 `PATCH_ROLLBACK_HOOK` を設定すると、`/patches/{id}/rollback` が発火時にこのスクリプトを呼び出す。終了コードが 0 の場合は `rollback_success`、それ以外は `rollback_failed` として `audit.log` に記録される。
+
+## 3. git worktree を利用した標準フック
+`agent/scripts/hooks/patch_apply_git.sh` は git worktree を用いて patch を検証するサンプル。環境変数 `PATCH_WORKSPACE` を指定すると、`<workspace>/.patch-worktrees/<patch_id>` に一時 worktree を作成し `git apply` → `pytest` を実行する。
+
+設定例:
+
+```bash
+export PATCH_WORKSPACE="$HOME/.yamada6"
+export PATCH_APPLY_HOOK="$(pwd)/agent/scripts/hooks/patch_apply_git.sh"
+```
 
 ## 3. テスト用モード
 - `PATCH_APPLY_MODE=fail` … `/patches/{id}/apply` が強制的に失敗し、pending に残る
