@@ -21,10 +21,12 @@
 - **自己編集パイプライン**: Y5 の Elastic executor を発展させ、staging でスナップショット→テスト→承認後にのみ本番へ適用。進捗はダッシュボードで可視化。
 - **可観測性と保守**: Y2 の監視基盤を復活させ Prometheus/Grafana 等と連携。ログ／ジャーナル圧縮やバックアップを自動化。
 - **ポリシー＆権限レジストリ**: 許可ツール・危険情報・承認ルールを署名付きボリュームとして共有し、runtime/staging/dashboard 間の整合性を確保。
+  - Docker を前提にしない運用も視野に入れ、ローカル Python プロセスのみで runtime/staging を動かせるよう二重化する。
 
 ## 4. 実装ロードマップ
 1. **Phase 1 基盤整備**
-   - `docker/compose.yml` と runtime/staging Dockerfile、共通ボリューム、ヘルスチェック付き制御 API を用意。
+   - runtime/staging をローカル Python プロセスで起動できるスクリプト (`host-tools/run_runtime.sh` など) を整備。
+   - コンテナ運用が必要になった場合のみ Dockerfile/compose を利用できるよう分離。
 2. **Phase 2 自己編集パイプライン**
    - staging デーモンで git worktree 同期・pytest/ruff/py_compile 実行・差分昇格 API を構築し、ダッシュボード承認フローと接続。
 3. **Phase 3 ミッション制御**
@@ -34,6 +36,6 @@
 5. **Phase 5 データライフサイクル**
    - ジャーナル圧縮ジョブ、ポリシーレジストリ、`host-tools/backup.sh` によるスナップショット運用、Prometheus/Grafana での長期監視を導入。
 6. **Phase 6 ハードニング**
-   - `agent/tests` に単体・統合テストを追加し、カオステストでコンテナ復元を検証。README/DESIGN に復旧手順を明記。
+   - `agent/tests` に単体・統合テストを追加し、ローカル実行でも安全に再現できるテストシナリオを整備。
 
 以上を順に実装することで、過去世代の知見を統合しつつ、Docker 分離環境で安全かつ継続的に自己進化できる Yamada6 を構築する。好奇心や未知性の指標は決め打ちせず、エージェント自身が経験から意味付けできる余白を温存する。

@@ -8,3 +8,5 @@
 staging コンテナは git worktree を前提としており、`/workspace/agent` にホストの `agent/` ディレクトリがマウントされる。テスト・差分生成はここで実施し、成功後に API 経由で runtime へ適用するフローを構築する。
 
 runtime コンテナはポート `8080` で FastAPI を提供し、`/healthz`, `/status`, `/control/*`, `/patches`, `/patches/{id}`, `/patches/{id}/apply`, `/patches/{id}/rollback`, `/patches/applied`, `/patches/audit` を通じて状態を制御できる。staging からの diff は `/patches` に送信し、適用前に runtime を `/control/pause` で停止、承認後 `/patches/{id}/apply` で実適用を進める設計。登録されたメタデータは `state/patches/*.json` に保存され、アーティファクトは `PATCH_STORAGE_DIR`（デフォルト `state/patches/`）配下にコピーされる。適用処理は `PATCH_APPLY_MODE` / `PATCH_APPLY_HOOK` で挙動を切り替えられ、監査ログは `state/patches/audit.log`（`/patches/audit`）で参照できる。`host-tools/start.sh` は `.patch_env` を自動読み込みするため、`configure-hooks.sh` 実行後に docker compose を起動するだけで hook 設定が反映される。
+
+> **メモ**: Docker が利用できない環境では、`./host-tools/run_runtime.sh` でローカルプロセスとして runtime API を起動できる。必要になった段階でのみ Docker を組み込む方針。

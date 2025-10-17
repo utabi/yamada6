@@ -22,9 +22,10 @@ volumes/       # Docker ボリュームのマウント先 (git では空)
 
 ## 着手順序
 1. `yamada6_better.md` を読み、目的と Phase ロードマップを理解する
-2. docker/ の scaffolding を整備し、staging → runtime の安全パイプラインを構築する
-3. PDCA 制御・ドライブサイドカー・データライフサイクルを段階的に組み込む
-4. `./host-tools/configure-hooks.sh` を実行して `.patch_env` を作成し、`host-tools/start.sh` で自動読み込み
+2. ローカル環境で Python 仮想環境を作成 (`cd agent && python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements`) ※Poetry でも可
+3. `./host-tools/configure-hooks.sh` を実行して `.patch_env` を作成（後続のスクリプトで自動読み込み）
+4. `./host-tools/run_runtime.sh` で runtime API を起動し、`/patches` 系 API や hook を試す
+5. Docker が必要になった段階で `docker/` ディレクトリを利用する（Big Sur など古い環境では未使用でも運用可能）
 
 - `uvicorn` で FastAPI を起動し、ランタイムループと同一プロセスで動作
 - `/healthz`, `/status` に加え、`/control/pause`, `/control/resume`, `/patches`, `/patches/{id}`, `/patches/{id}/apply`, `/patches/{id}/rollback`, `/patches/applied`, `/patches/audit` を提供
