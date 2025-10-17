@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import datetime as dt
 import json
+import os
 import shutil
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, asdict
@@ -18,6 +19,7 @@ from agent.executor import Executor
 from agent.executor import ExecutionResult
 from agent.planner import Plan, Planner
 from agent.scheduler import ScheduledTask, Scheduler
+from agent.runtime.patch_executor import ApplyResult, PatchExecutor
 
 
 @dataclass(slots=True)
@@ -74,6 +76,8 @@ class RuntimeApp:
         self._patch_storage_dir = self._config.patch_storage_dir
         self._patch_storage_dir.mkdir(parents=True, exist_ok=True)
         self._audit_log_path = self._patch_storage_dir / "audit.log"
+        workspace = Path(os.environ.get("PATCH_WORKSPACE", Path.cwd()))
+        self._patch_executor = PatchExecutor(workspace=workspace)
         self._reload_patches()
 
     @asynccontextmanager
@@ -201,11 +205,35 @@ class RuntimeApp:
             return destination
         raise ValueError(f"Unsupported artifact URI scheme: {parsed.scheme or 'missing'}")
 
-    def mark_applied(self, patch: PendingPatch) -> None:
-        self._applied_patches.append(patch)
-        self._write_audit_log(patch, status="applied", extra={
-            "artifact_local_path": patch.artifact_local_path,
-        })
+    def apply_patch(self, patch_id: str) -> ApplyResult:
+        patch = self.get_patch(patch_id)
+        if patch is None:
+            raise KeyError(patch_id)
+
+        artifact_path = self.fetch_patch_artifact(patch)
+        result = self._patch_executor.apply(artifact_path)
+        if result.ok:
+            self.pop_patch(patch_id)
+            self._applied_patches.append(patch)
+            self._write_audit_log(
+                patch,
+                status="apply_success",
+                extra={
+                    "artifact_local_path": patch.artifact_local_path,
+                    "detail": result.detail,
+                    "command": result.command,
+                },
+            )
+        else:
+            self._write_audit_log(
+                patch,
+                status="apply_failed",
+                extra={
+                    "detail": result.detail,
+                    "command": result.command,
+                },
+            )
+        return result
 
     def list_applied_patches(self) -> List[PendingPatch]:
         return list(self._applied_patches)

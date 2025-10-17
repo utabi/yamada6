@@ -110,24 +110,26 @@ def create_app(runtime: RuntimeApp) -> FastAPI:
         if not runtime.is_paused():
             raise HTTPException(status_code=409, detail="Pause runtime before applying patches")
 
-        patch = runtime.get_patch(patch_id)
-        if patch is None:
-            raise HTTPException(status_code=404, detail="Patch not found")
-
         try:
-            artifact_path = runtime.fetch_patch_artifact(patch)
+            result = runtime.apply_patch(patch_id)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail="Patch not found") from exc
         except FileNotFoundError as exc:
             raise HTTPException(status_code=404, detail=f"Artifact not found: {exc}") from exc
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-        runtime.pop_patch(patch_id)
-        runtime.mark_applied(patch)
-        logger.info("Apply patch requested: %s", patch.patch_id)
+        logger.info("Apply patch requested: %s", patch_id)
         return {
-            "status": "apply_requested",
-            "patch_id": patch.patch_id,
-            "artifact_path": str(artifact_path),
+            "status": "apply_success" if result.ok else "apply_failed",
+            "patch_id": patch_id,
+            "detail": result.detail,
+            "artifact_path": str(result.artifact_path),
         }
+
+    @app.post("/patches/{patch_id}/rollback", status_code=202)
+    async def rollback_patch(patch_id: str) -> dict[str, str]:
+        logger.info("Rollback requested (stub): %s", patch_id)
+        return {"status": "rollback_pending", "patch_id": patch_id}
 
     return app

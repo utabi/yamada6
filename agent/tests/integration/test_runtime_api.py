@@ -73,6 +73,7 @@ def test_runtime_api_health_and_status(tmp_path, monkeypatch):
 
         apply_resp = client.post("/patches/patch-1/apply")
         assert apply_resp.status_code == HTTPStatus.ACCEPTED
+        assert apply_resp.json()["status"] == "apply_success"
         assert runtime.snapshot()["pending_patches"] == []
         assert not stored_file.exists()
         copied_artifact = patch_dir / "patch-1.artifact"
@@ -85,7 +86,7 @@ def test_runtime_api_health_and_status(tmp_path, monkeypatch):
         assert audit_resp.status_code == HTTPStatus.OK
         audit_entries = audit_resp.json()
         statuses = {entry["status"] for entry in audit_entries}
-        assert {"queued", "artifact_copied", "applied"}.issubset(statuses)
+        assert {"queued", "artifact_copied", "apply_success"}.issubset(statuses)
 
         apply_missing = client.post("/patches/patch-1/apply")
         assert apply_missing.status_code == HTTPStatus.NOT_FOUND
@@ -126,3 +127,39 @@ def test_restart_reload_pending_patches(tmp_path, monkeypatch):
     snapshot = new_runtime.snapshot()
     assert snapshot["pending_patches"]
     assert snapshot["pending_patches"][0]["patch_id"] == "persist-1"
+
+
+def test_patch_apply_failure(tmp_path, monkeypatch):
+    monkeypatch.setenv("PATCH_APPLY_MODE", "fail")
+    runtime, patch_dir, _ = create_runtime(tmp_path, monkeypatch)
+    app = create_app(runtime)
+
+    with TestClient(app) as client:
+        client.post("/control/pause")
+        artifact_src = tmp_path / "fail.patch"
+        artifact_src.write_text("diff --git e f", encoding="utf-8")
+
+        client.post(
+            "/patches",
+            json={
+                "patch_id": "fail-1",
+                "summary": "Should fail",
+                "author": "staging",
+                "created_at": "2025-10-16T00:00:00Z",
+                "artifact_uri": artifact_src.as_uri(),
+            },
+        )
+
+        response = client.post("/patches/fail-1/apply")
+        assert response.status_code == HTTPStatus.ACCEPTED
+        payload = response.json()
+        assert payload["status"] == "apply_failed"
+        assert runtime.snapshot()["pending_patches"]
+
+        audit_entries = client.get("/patches/audit").json()
+        statuses = {entry["status"] for entry in audit_entries}
+        assert "apply_failed" in statuses
+
+        # JSON メタデータが残っていること（再試行可能）
+        stored_file = Path(runtime.snapshot()["patch_storage_dir"]) / "fail-1.json"
+        assert stored_file.exists()
