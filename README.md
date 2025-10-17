@@ -8,6 +8,7 @@ Yamada6 は、自律的に自己存続を守りつつ環境変化へ進化し続
 - `yamada6.md` — 初期コンセプト概要
 - `docs/PATCH_WORKFLOW.md` — staging → runtime のパッチ適用フロー案
 - `docs/PATCH_HOOKS.md` — `PATCH_APPLY_HOOK` / `PATCH_ROLLBACK_HOOK` の使い方
+- `docs/HOST_SETUP.md` — ホスト側 hook 設定手順
 
 ## ディレクトリ概要
 ```
