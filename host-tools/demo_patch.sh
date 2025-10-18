@@ -7,7 +7,7 @@ PATCH_ID="demo-auto-$(date +%s)"
 SUMMARY="Auto demo patch $PATCH_ID"
 TARGET_REL="docs/OVERVIEW.md"
 TARGET_PATH="$ROOT_DIR/$TARGET_REL"
-TMP_DIR=$(mktemp -d "${TMPDIR:-/tmp}/yamada6_demo.XXXXXX")
+TMP_DIR=$(mktemp -d)
 PATCH_FILE="$TMP_DIR/${PATCH_ID}.diff"
 
 python3 - "$TARGET_PATH" "$PATCH_FILE" "$TARGET_REL" <<'PY'
@@ -23,7 +23,6 @@ text = source_path.read_text(encoding="utf-8").splitlines()
 addition = f"- Auto generated note at {datetime.now(timezone.utc).isoformat()}"
 modified = text + [addition]
 
-# difflib unified diff
 patch = difflib.unified_diff(
     text,
     modified,
