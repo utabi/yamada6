@@ -7,19 +7,24 @@ PATCH_ID="demo-auto-$(date +%s)"
 SUMMARY="Auto demo patch $PATCH_ID"
 TARGET_REL="docs/OVERVIEW.md"
 TARGET_PATH="$ROOT_DIR/$TARGET_REL"
-TMP_DIR=$(mktemp -d)
+TMP_BASE="$ROOT_DIR/tmp/demo_patch"
+mkdir -p "$TMP_BASE"
+TMP_DIR=$(mktemp -d "$TMP_BASE/XXXXXX")
 PATCH_FILE="$TMP_DIR/${PATCH_ID}.diff"
 
-python3 - "$TARGET_PATH" "$PATCH_FILE" "$TARGET_REL" <<'PY'
+export TARGET_PATH PATCH_FILE TARGET_REL
+
+python3 <<'PY'
 from datetime import datetime, timezone
 import difflib
-import sys
+import os
 from pathlib import Path
 
-source_path = Path(sys.argv[1])
-patch_path = Path(sys.argv[2])
-rel = sys.argv[3]
-text = source_path.read_text(encoding="utf-8").splitlines()
+source_path = Path(os.environ['TARGET_PATH'])
+patch_path = Path(os.environ['PATCH_FILE'])
+rel = os.environ['TARGET_REL']
+
+text = source_path.read_text(encoding='utf-8').splitlines()
 addition = f"- Auto generated note at {datetime.now(timezone.utc).isoformat()}"
 modified = text + [addition]
 
@@ -28,9 +33,9 @@ patch = difflib.unified_diff(
     modified,
     fromfile=f"a/{rel}",
     tofile=f"b/{rel}",
-    lineterm="\n",
+    lineterm='\n',
 )
-patch_path.write_text("".join(patch), encoding="utf-8")
+patch_path.write_text(''.join(patch), encoding='utf-8')
 PY
 
 cleanup() {
