@@ -56,6 +56,7 @@ class PendingPatch:
     test_report_uri: Optional[str] = None
     notes: Optional[str] = None
     artifact_local_path: Optional[str] = None
+    diff_preview: Optional[str] = None
 
 
 class RuntimeApp:
@@ -168,6 +169,11 @@ class RuntimeApp:
         }
 
     def enqueue_patch(self, patch: PendingPatch) -> None:
+        if patch.diff_preview is None:
+            try:
+                patch.diff_preview = Path(patch.artifact_uri.removeprefix("file://")).read_text(encoding="utf-8")
+            except Exception:  # noqa: BLE001
+                patch.diff_preview = None
         self._pending_patches[patch.patch_id] = patch
         self._write_patch_file(patch)
         self._write_audit_log(patch, status="queued", extra={"artifact_uri": patch.artifact_uri})
@@ -232,6 +238,7 @@ class RuntimeApp:
                 },
             )
         else:
+            patch.diff_preview = (artifact_path.read_text(encoding="utf-8") if artifact_path.exists() else patch.diff_preview)
             self._write_audit_log(
                 patch,
                 status="apply_failed",

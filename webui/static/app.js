@@ -39,9 +39,22 @@ function renderPending(patches) {
       <td>
         <button data-apply="${patch.patch_id}">apply</button>
         <button data-rollback="${patch.patch_id}">rollback</button>
+        <button data-toggle="${patch.patch_id}">diff</button>
       </td>
     `;
     pendingTable.appendChild(tr);
+
+    if (patch.diff_preview) {
+      const trPreview = document.createElement('tr');
+      trPreview.className = 'diff-row';
+      const td = document.createElement('td');
+      td.colSpan = 5;
+      td.innerHTML = `<pre>${patch.diff_preview.replace(/</g, '&lt;')}</pre>`;
+      trPreview.dataset.diffFor = patch.patch_id;
+      trPreview.hidden = true;
+      trPreview.appendChild(td);
+      pendingTable.appendChild(trPreview);
+    }
   });
 }
 
@@ -107,6 +120,13 @@ controlButtons.forEach((btn) => {
 pendingTable.addEventListener('click', async (event) => {
   const target = event.target;
   if (!(target instanceof HTMLButtonElement)) return;
+
+  if (target.dataset.toggle) {
+    const id = target.dataset.toggle;
+    const row = pendingTable.querySelector(`tr[data-diff-for="${id}"]`);
+    if (row) row.hidden = !row.hidden;
+    return;
+  }
 
   if (target.dataset.apply) {
     const id = target.dataset.apply;

@@ -50,6 +50,7 @@ payload = {
     "created_at": os.environ['CREATED_AT'],
     "artifact_uri": f"file://{os.environ['ABS_PATH']}",
     "notes": os.environ.get('PATCH_NOTES', ''),
+    "diff_preview": Path(os.environ['ABS_PATH']).read_text(encoding='utf-8'),
 }
 print(json.dumps(payload))
 PY
