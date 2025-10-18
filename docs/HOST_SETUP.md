@@ -23,6 +23,8 @@
 
 5. diff を登録・適用したい場合は次のスクリプトを利用する。
    ```bash
+   ./host-tools/demo_patch.sh
+   # あるいは
    ./host-tools/apply_patch.sh demo-001 /path/to/diff.patch "任意の概要"
    ```
    これにより pause → `/patches` 登録 → `/patches/{id}/apply` → resume まで自動実行される。
