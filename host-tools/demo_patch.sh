@@ -1,42 +1,37 @@
 #!/usr/bin/env bash
-# docs/OVERVIEW.md に自動で行追加し、runtime に登録・適用するデモ。
+# docs/OVERVIEW.md に自動で1行追加し、patch を適用するデモ。
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PATCH_ID="demo-auto-$(date +%s)"
 SUMMARY="Auto demo patch $PATCH_ID"
-TARGET="$ROOT_DIR/docs/OVERVIEW.md"
-TMP_DIR=$(mktemp -d)
+TARGET_REL="docs/OVERVIEW.md"
+TARGET_PATH="$ROOT_DIR/$TARGET_REL"
+TMP_DIR=$(mktemp -d "${TMPDIR:-/tmp}/yamada6_demo.XXXXXX")
 PATCH_FILE="$TMP_DIR/${PATCH_ID}.diff"
 
-python - "$TARGET" "$PATCH_FILE" <<'PY'
+python - "$TARGET_PATH" "$PATCH_FILE" "$TARGET_REL" <<'PY'
 import datetime as dt
-import subprocess
+import difflib
 import sys
 from pathlib import Path
 
-source = Path(sys.argv[1]).resolve()
-patch_path = Path(sys.argv[2]).resolve()
+source_path = Path(sys.argv[1])
+patch_path = Path(sys.argv[2])
+rel = sys.argv[3]
+text = source_path.read_text(encoding="utf-8").splitlines()
+addition = f"- Auto generated note at {dt.datetime.utcnow().isoformat()}Z"
+modified = text + [addition]
 
-text = source.read_text(encoding="utf-8").rstrip("\n")
-timestamp = dt.datetime.utcnow().isoformat() + "Z"
-addition = f"\n- Auto generated note at {timestamp}"
-
-workdir = patch_path.parent
-orig = workdir / "orig.txt"
-mod = workdir / "mod.txt"
-orig.write_text(text + "\n", encoding="utf-8")
-mod.write_text(text + addition + "\n", encoding="utf-8")
-
-result = subprocess.run(
-    ["git", "diff", "--no-index", str(orig), str(mod)],
-    capture_output=True,
-    text=True,
-    check=False,
+# difflib unified diff
+patch = difflib.unified_diff(
+    text,
+    modified,
+    fromfile=f"a/{rel}",
+    tofile=f"b/{rel}",
+    lineterm="\n",
 )
-if result.returncode not in (0, 1):
-    raise SystemExit(result.stderr)
-patch_path.write_text(result.stdout, encoding="utf-8")
+patch_path.write_text("".join(patch), encoding="utf-8")
 PY
 
 cleanup() {
