@@ -11,3 +11,5 @@
    - 成功時は `/status` から pending queue を除外し `/patches/applied` に反映。失敗時は pending に残り、`/patches/{id}/rollback` (stub) や再実行で対応
 
 現状は `file://` のアーティファクトコピーと監査ログ・疑似適用フローまで実装済み。`PATCH_APPLY_MODE=fail` で失敗動作をテストできる。`PATCH_APPLY_HOOK` を使えば任意スクリプト（例: git worktree で `git apply` → テスト → `git reset --hard`）を呼び出せる。Docker を使わず `./host-tools/run_runtime.sh` で runtime API を起動して試験可能。メタデータは `state/patches/<id>.json` に保存され、再起動後も参照可能。
+
+CLI で一連の操作を行いたい場合は `./host-tools/apply_patch.sh <patch_id> <diff>` を利用する。
