@@ -10,8 +10,8 @@ TARGET_PATH="$ROOT_DIR/$TARGET_REL"
 TMP_DIR=$(mktemp -d "${TMPDIR:-/tmp}/yamada6_demo.XXXXXX")
 PATCH_FILE="$TMP_DIR/${PATCH_ID}.diff"
 
-python - "$TARGET_PATH" "$PATCH_FILE" "$TARGET_REL" <<'PY'
-import datetime as dt
+python3 - "$TARGET_PATH" "$PATCH_FILE" "$TARGET_REL" <<'PY'
+from datetime import datetime, timezone
 import difflib
 import sys
 from pathlib import Path
@@ -20,7 +20,7 @@ source_path = Path(sys.argv[1])
 patch_path = Path(sys.argv[2])
 rel = sys.argv[3]
 text = source_path.read_text(encoding="utf-8").splitlines()
-addition = f"- Auto generated note at {dt.datetime.utcnow().isoformat()}Z"
+addition = f"- Auto generated note at {datetime.now(timezone.utc).isoformat()}"
 modified = text + [addition]
 
 # difflib unified diff
