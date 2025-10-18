@@ -38,7 +38,7 @@ def main() -> None:
     parser.add_argument("--base-url", default="http://127.0.0.1:8080", help="Runtime API base URL")
     parser.add_argument(
         "--target",
-        default=Path(__file__).resolve().parents[3] / "docs" / "OVERVIEW.md",
+        default=Path(__file__).resolve().parents[4] / "docs" / "OVERVIEW.md",
         type=Path,
         help="Target file to modify",
     )
