@@ -40,6 +40,7 @@ resume_runtime() {
 
 register_patch() {
   python3 - <<'PY'
+from pathlib import Path
 import json
 import os
 
