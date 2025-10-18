@@ -26,11 +26,7 @@ if [[ ! -f "$DIFF_PATH" ]]; then
   exit 1
 fi
 
-ABS_PATH=$(python - <<PY
-import os,sys
-print(os.path.abspath(sys.argv[1]))
-PY
-"$DIFF_PATH")
+ABS_PATH=$(cd "$(dirname "$DIFF_PATH")" && pwd)/$(basename "$DIFF_PATH")
 
 CREATED_AT=$(date -u "+%Y-%m-%dT%H:%M:%SZ")
 
@@ -43,21 +39,17 @@ resume_runtime() {
 }
 
 register_patch() {
-  python - <<'PY'
-import json, os, sys
-patch_id = os.environ['PATCH_ID']
-summary = os.environ['SUMMARY']
-author = os.environ.get('PATCH_AUTHOR', 'auto-staging')
-created_at = os.environ['CREATED_AT']
-artifact = os.environ['ABS_PATH']
-notes = os.environ.get('PATCH_NOTES', '')
+  python3 - <<'PY'
+import json
+import os
+
 payload = {
-    "patch_id": patch_id,
-    "summary": summary,
-    "author": author,
-    "created_at": created_at,
-    "artifact_uri": f"file://{artifact}",
-    "notes": notes,
+    "patch_id": os.environ['PATCH_ID'],
+    "summary": os.environ['SUMMARY'],
+    "author": os.environ.get('PATCH_AUTHOR', 'auto-staging'),
+    "created_at": os.environ['CREATED_AT'],
+    "artifact_uri": f"file://{os.environ['ABS_PATH']}",
+    "notes": os.environ.get('PATCH_NOTES', ''),
 }
 print(json.dumps(payload))
 PY
